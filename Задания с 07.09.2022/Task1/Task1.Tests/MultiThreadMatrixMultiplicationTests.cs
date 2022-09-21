@@ -1,5 +1,8 @@
 ﻿namespace Task1.Tests;
 
+/// <summary>
+/// Тестирование многопоточного умножения матриц
+/// </summary>
 public class MultiThreadMatrixMultiplicationTests
 {
     [Test]

@@ -8,7 +8,7 @@ public static class MatrixMultiplication
     /// <summary>
     /// Считать матрицу из файла
     /// </summary>
-    private static float[,] GetMatrixFromFile(string fileName)
+    public static float[,] GetMatrixFromFile(string fileName)
     {
         var allLines = File.ReadAllLines(fileName);
         var matrixHeight = allLines.Length;
@@ -39,7 +39,7 @@ public static class MatrixMultiplication
     /// <summary>
     /// Записать матрицу в файл
     /// </summary>
-    private static void WriteMatrixToFile(string fileName, float[,] matrix)
+    public static void WriteMatrixToFile(string fileName, float[,] matrix)
     {
         using (StreamWriter streamWriter = new StreamWriter(fileName))
         {
@@ -168,13 +168,13 @@ public static class MatrixMultiplication
         var threads = new Thread[threadsCount];
         var chunkSize = (firstMatrix.GetLength(0) * secondMatrix.GetLength(1)) / threadsCount + 1;
         var resultMatrix = new float[firstMatrix.GetLength(0), secondMatrix.GetLength(1)];
+        var resultMatrixElementsCount = resultMatrix.GetLength(0) * resultMatrix.GetLength(1);
 
         for (var i = 0; i < threadsCount; i++)
         {
+            var localI = i;
             threads[i] = new Thread(() =>
             {
-                var localI = i;
-                var resultMatrixElementsCount = resultMatrix.GetLength(0) * resultMatrix.GetLength(1);
                 for (var j = localI * chunkSize; j < (localI + 1) * chunkSize && j < resultMatrixElementsCount; j++)
                 {
                     var valueRowNumber = j / resultMatrix.GetLength(1);
