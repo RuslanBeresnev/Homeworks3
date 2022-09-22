@@ -40,35 +40,33 @@ internal class GetStatistics
     /// <summary>
     /// Вывести в файл всю статистику
     /// </summary>
-    private static void PrintStatistics(string testsDataFile, int launchesCount, string statisticsOutputFile)
+    internal static void PrintStatistics(string testsDataFile, int launchesCount, string statisticsOutputFile)
     {
         var time = new Stopwatch();
-        var testsDataMatrix = MatrixMultiplication.GetMatrixFromFile(testsDataFile);
+        var testsDataMatrix = MatrixGeneration.GetMatrixFromFile(testsDataFile);
         StreamWriter streamWriter = new StreamWriter(statisticsOutputFile);
 
         for (int testNumber = 0; testNumber < testsDataMatrix.GetLength(0); testNumber++)
         {
-            MatrixGeneration.GenerateMatrix("../../../First Matrix.txt", (int)testsDataMatrix[testNumber, 0],
-                (int)testsDataMatrix[testNumber, 1], testsDataMatrix[testNumber, 4], testsDataMatrix[testNumber, 5]);
-            MatrixGeneration.GenerateMatrix("../../../Second Matrix.txt", (int)testsDataMatrix[testNumber, 2],
-                (int)testsDataMatrix[testNumber, 3], testsDataMatrix[testNumber, 4], testsDataMatrix[testNumber, 5]);
+            var firstMatrix = MatrixGeneration.GenerateMatrix((int)testsDataMatrix[testNumber, 0], (int)testsDataMatrix[testNumber, 1],
+                testsDataMatrix[testNumber, 4], testsDataMatrix[testNumber, 5]);
+            var secondMatrix = MatrixGeneration.GenerateMatrix((int)testsDataMatrix[testNumber, 2], (int)testsDataMatrix[testNumber, 3],
+                testsDataMatrix[testNumber, 4], testsDataMatrix[testNumber, 5]);
 
             var singleThreadMethodWorkingTimes = new float[launchesCount];
             var multiThreadMethodWorkingTimes = new float[launchesCount];
 
             for (int launchNumber = 0; launchNumber < launchesCount; launchNumber++)
             {
-                time.Start();
-                MatrixMultiplication.SingleThreadedMatrixMultiplication("../../../First Matrix.txt", "../../../Second Matrix.txt",
-                    "../../../Result Matrix.txt");
+                time.Restart();
+                MatrixMultiplication.SingleThreadedMatrixMultiplication(firstMatrix, secondMatrix);
                 time.Stop();
-                singleThreadMethodWorkingTimes[launchNumber] = time.Elapsed.Seconds;
+                singleThreadMethodWorkingTimes[launchNumber] = (float) time.Elapsed.TotalSeconds;
 
-                time.Start();
-                MatrixMultiplication.MultiThreadedMatrixMultiplication("../../../First Matrix.txt", "../../../Second Matrix.txt",
-                    "../../../Result Matrix.txt");
+                time.Restart();
+                MatrixMultiplication.MultiThreadedMatrixMultiplication(firstMatrix, secondMatrix);
                 time.Stop();
-                multiThreadMethodWorkingTimes[launchNumber] = time.Elapsed.Seconds;
+                multiThreadMethodWorkingTimes[launchNumber] = (float) time.Elapsed.TotalSeconds;
             }
 
             var singleThreadMethodMathematicalExpectation = CalculateMathematicalExpectation(singleThreadMethodWorkingTimes);
@@ -78,31 +76,20 @@ internal class GetStatistics
             var multiThreadMethodStandardDeviation = CalculateStandardDeviation(multiThreadMethodWorkingTimes);
 
             streamWriter.WriteLine($"Статистика для теста под номером: {testNumber}");
-            streamWriter.WriteLine("---------------------------------------------------------");
+            streamWriter.WriteLine("--------------------------------------------------------------------------------");
             streamWriter.WriteLine("Матожидание для однопоточного метода " +
                 $"умножения матриц (секунды): {singleThreadMethodMathematicalExpectation}");
             streamWriter.WriteLine("Среднеквадратичное отклонение для однопоточного метода " +
                 $"умножения матриц (секунды): {singleThreadMethodStandardDeviation}");
-            streamWriter.WriteLine("Матожидание для многопоточного метода" +
+            streamWriter.WriteLine("Матожидание для многопоточного метода " +
                 $"умножения матриц (секунды): {multiThreadMethodMathematicalExpectation}");
             streamWriter.WriteLine("Среднеквадратичное отклонение для многопоточного метода " +
                 $"умножения матриц (секунды): {multiThreadMethodStandardDeviation}");
-            streamWriter.WriteLine("Ускорение при использовании многопоточного метода" +
+            streamWriter.WriteLine("Ускорение при использовании многопоточного метода " +
                 $"(во сколько раз быстрее): {singleThreadMethodMathematicalExpectation / multiThreadMethodMathematicalExpectation}");
             streamWriter.WriteLine();
         }
 
         streamWriter.Close();
-    }
-
-    public static void Main(string[] args)
-    {
-        const int LAUNCHES_COUNT = 10;
-
-        // В файле "Test Parameters.txt" заданы параметры для тестов времени умножения матриц:
-        // В каждой строке отдельный тест из 6 парамметров: Высота и Ширина первой матрицы, Высота и Ширина второй матрицы,
-        // Минимальное и Максимальное генерируемое значение в матрицах
-
-        PrintStatistics("../../../Tests Parameters.txt", LAUNCHES_COUNT, "../../../Statistics Output.txt");
     }
 }

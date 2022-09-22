@@ -8,16 +8,18 @@ public class MultiThreadMatrixMultiplicationTests
     [Test]
     public void CorrectCaseMatrixMultiplicationTest()
     {
-        MatrixMultiplication.MultiThreadedMatrixMultiplication("../../../Correct Case First Matrix.txt",
-            "../../../Correct Case Second Matrix.txt", "../../../Result Of Multi Thread.txt");
-        Assert.True(File.ReadAllBytes("../../../Result Of Multi Thread.txt").SequenceEqual(File.ReadAllBytes("../../../Correct Case Result Matrix.txt")));
-    }
+        var firstMatrix = MatrixGeneration.GetMatrixFromFile("../../../Correct Case First Matrix.txt");
+        var secondMatrix = MatrixGeneration.GetMatrixFromFile("../../../Correct Case Second Matrix.txt");
+        var resultMatrix = MatrixMultiplication.MultiThreadedMatrixMultiplication(firstMatrix, secondMatrix);
+        var correctResultMatrix = MatrixGeneration.GetMatrixFromFile("../../../Correct Case Result Matrix.txt");
+        Assert.True(MatrixMultiplication.IsFirstAndSecondMatricesEquals(resultMatrix, correctResultMatrix));
+    }   
 
     [Test]
     public void InCorrectCaseMatrixMultiplicationTest()
     {
-        Assert.Throws<InvalidDataException>(() =>
-            MatrixMultiplication.MultiThreadedMatrixMultiplication("../../../Incorrect Case First Matrix.txt",
-                "../../../Incorrect Case Second Matrix.txt", "../../../Result Of Multi Thread.txt"));
+        var firstMatrix = MatrixGeneration.GetMatrixFromFile("../../../Incorrect Case First Matrix.txt");
+        var secondMatrix = MatrixGeneration.GetMatrixFromFile("../../../Incorrect Case Second Matrix.txt");
+        Assert.Throws<InvalidDataException>(() => MatrixMultiplication.MultiThreadedMatrixMultiplication(firstMatrix, secondMatrix));
     }
 }

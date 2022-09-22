@@ -8,8 +8,7 @@ public class MatrixGenerationTests
     [Test]
     public void GenerateLargeMatrixTest()
     {
-        MatrixGeneration.GenerateMatrix("../../../First Matrix.txt", 1000, 1000, 100f, 1000f);
-        var matrix = MatrixMultiplication.GetMatrixFromFile("../../../First Matrix.txt");
+        var matrix = MatrixGeneration.GenerateMatrix(1000, 1000, 100f, 1000f);
 
         if (matrix.GetLength(0) != 1000 || matrix.GetLength(1) != 1000)
         {

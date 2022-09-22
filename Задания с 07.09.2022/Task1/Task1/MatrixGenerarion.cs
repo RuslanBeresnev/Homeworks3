@@ -6,14 +6,69 @@
 public static class MatrixGeneration
 {
     /// <summary>
+    /// Считать матрицу из файла
+    /// </summary>
+    public static float[,] GetMatrixFromFile(string fileName)
+    {
+        var allLines = File.ReadAllLines(fileName);
+        var matrixHeight = allLines.Length;
+        var matrixWidth = allLines[0].Split(" ").Length;
+
+        var matrix = new float[matrixHeight, matrixWidth];
+        StreamReader streamReader = new StreamReader(fileName);
+
+        var line = streamReader.ReadLine();
+        var lineIndex = 0;
+        while (line != null)
+        {
+            var valueIndex = 0;
+            foreach (var value in line.Split(" ").Select(x => float.Parse(x)))
+            {
+                matrix[lineIndex, valueIndex] = value;
+                valueIndex++;
+            }
+
+            line = streamReader.ReadLine();
+            lineIndex++;
+        }
+
+        streamReader.Close();
+        return matrix;
+    }
+
+    /// <summary>
+    /// Записать матрицу в файл
+    /// </summary>
+    public static void WriteMatrixToFile(string fileName, float[,] matrix)
+    {
+        using (StreamWriter streamWriter = new StreamWriter(fileName))
+        {
+            for (int i = 0; i < matrix.GetLength(0); i++)
+            {
+                var row = "";
+                for (int j = 0; j < matrix.GetLength(1); j++)
+                {
+                    row += matrix[i, j].ToString();
+
+                    if (j != matrix.GetLength(1) - 1)
+                    {
+                        row += " ";
+                    }
+                }
+                streamWriter.WriteLine(row);
+            }
+        }
+    }
+
+
+    /// <summary>
     /// Сгенерировать матрицу определённых размеров
     /// </summary>
-    /// <param name="fileName">Файл, куда будет записана матрица</param>
     /// <param name="width">Количество столбцов в матрице</param>
     /// <param name="height">Количество строк в матрице</param>
     /// <param name="minValue">Минимальное float-значение, которое может быть сгенерировано в матрице</param>
     /// <param name="maxValue">Максимальное float-значение, которое может быть сгенерировано в матрице</param>
-    public static void GenerateMatrix(string fileName, int height, int width, float minValue, float maxValue)
+    public static float[,] GenerateMatrix(int height, int width, float minValue, float maxValue)
     {
         var matrix = new float[height, width];
         var random = new Random();
@@ -26,6 +81,6 @@ public static class MatrixGeneration
             }
         }
 
-        MatrixMultiplication.WriteMatrixToFile(fileName, matrix);
+        return matrix;
     }
 }
