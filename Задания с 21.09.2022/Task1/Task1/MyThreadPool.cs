@@ -1,19 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 
 namespace MyThreadPool;
-
 
 /// <summary>
 /// Реализация пула потоков
 /// </summary>
 public class MyThreadPool
 {
-    private Queue<Task> tasksForExecution = new Queue<Task>();
+    private Thread[] pool;
+    private ConcurrentQueue<Action> tasksForExecution = new();
+    private AutoResetEvent autoResetEvent = new AutoResetEvent(false);
+    private CancellationTokenSource tokenSource = new CancellationTokenSource();
+    private Object lockObject = new Object();
 
-    public MyThreadPool(int threadsConunt)
+    public MyThreadPool(int threadsCount)
     {
-        ThreadsCount = threadsConunt;
-        StartThreads();
+        if (threadsCount <= 0)
+        {
+            throw new InvalidDataException("Количество потоков должно быть > 0");
+        }
+
+        ThreadsCount = threadsCount;
+        pool = new Thread[ThreadsCount];
+        CreateAndStartThreads();
     }
 
     /// <summary>
@@ -22,15 +31,74 @@ public class MyThreadPool
     public int ThreadsCount { get; private set; }
 
     /// <summary>
-    /// Создать и запустить потоки
+    /// Создать потоки и запустить их
     /// </summary>
-    private void StartThreads()
+    private void CreateAndStartThreads()
     {
-        // pass
+        for (int i = 0; i < ThreadsCount; i++)
+        {
+            pool[i] = new Thread(() =>
+            {
+                while (!tokenSource.IsCancellationRequested)
+                {
+                    if (tasksForExecution.TryDequeue(out var task))
+                    {
+                        task();
+                    }
+                    else
+                    {
+                        autoResetEvent.WaitOne();
+                    }
+                }
+            });
+        }
+
+        for (int i = 0; i < ThreadsCount; i++)
+        {
+            pool[i].Start();
+        }
     }
 
-    public MyTask<TResult> Submit(Func<TResult> function)
+    /// <summary>
+    /// Поставить выполнение задачи на один из свободных потоков
+    /// </summary>
+    public IMyTask<TResult> Submit<TResult>(Func<TResult> function)
     {
-        
+        if (tokenSource.IsCancellationRequested)
+        {
+            throw new InvalidOperationException("Пул потоков закончил свою работу");
+        }
+
+        lock (lockObject)
+        {
+            var newTask = new MyTask<TResult>(function, this);
+            tasksForExecution.Enqueue(newTask.CalculateResult);
+            autoResetEvent.Set();
+            return newTask;
+        }
+    }
+
+    /// <summary>
+    /// Коллаборативное прекращение работы потоков
+    /// </summary>
+    public void Shutdown()
+    {
+        tokenSource.Cancel();
+
+        for (int i = 0; i < ThreadsCount; i++)
+        {
+            autoResetEvent.Set();
+        }
+
+        for (int i = 0; i < ThreadsCount; i++)
+        {
+            pool[i].Join();
+        }
+
+        var localLockObject = new Object();
+        lock (localLockObject)
+        {
+            tokenSource.Dispose();
+        }
     }
 }

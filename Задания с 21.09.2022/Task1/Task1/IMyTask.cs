@@ -8,15 +8,15 @@ public interface IMyTask<TResult>
     /// <summary>
     /// Выполнена ли задача на данный момент
     /// </summary>
-    public bool IsComplited { get; set; }
+    public bool IsComplited { get; }
 
     /// <summary>
     /// Результат вычисленной задачи
     /// </summary>
-    public TResult Result { get; protected set; }
+    public TResult Result { get; }
 
     /// <summary>
     /// Создать новую задачу, которая принимает результат текущей
     /// </summary>
-    public IMyTask<TResult> ContinueWith(Func<TResult, TNewResult> task);
+    public IMyTask<TNewResult> ContinueWith<TNewResult>(Func<TResult, TNewResult> func);
 }
