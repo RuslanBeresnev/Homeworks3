@@ -2,48 +2,92 @@
 
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
 
 /// <summary>
 /// FTP-server realization
 /// </summary>
-public class FTPServer
+public static class FTPServer
 {
-    private int port;
-    private IPAddress ip;
-
-    public FTPServer(int port, IPAddress ip)
-    {
-        this.port = port;
-        this.ip = ip;
-
-        StartServer();
-    }
-
-    private async void StartServer()
+    public static async Task StartServer(IPAddress ip, int port)
     {
         var listener = new TcpListener(ip, port);
         listener.Start();
-        var socket = await listener.AcceptSocketAsync();
 
-        Task.Run(async () =>
+        while (true)
         {
-            // pass
-        });
+            var socket = await listener.AcceptSocketAsync();
+
+            Task.Run(async () =>
+            {
+                var stream = new NetworkStream(socket);
+                var reader = new StreamReader(stream);
+                var data = await reader.ReadLineAsync();
+
+                var writer = new StreamWriter(stream);
+                writer.AutoFlush = true;
+
+                int commandNumber = int.Parse(data.Split(" ")[0]);
+                string path = data.Split(" ")[1];
+                if (commandNumber == 1)
+                {
+                    var response = PerformListRequest(path);
+                    // pass
+                }
+                else if (commandNumber == 2)
+                {
+                    (long size, byte[]? bytes) = await PerformGetRequest(path);
+                    // pass
+                }
+
+                socket.Close();
+            });
+        }
     }
 
     /// <summary>
     /// Server's directory enumeration realization
     /// </summary>
-    public void PerformListRequest()
+    private static string PerformListRequest(string path)
     {
-        // pass
+        if (!Directory.Exists(path))
+        {
+            return "-1";
+        }
+
+        var response = "";
+        var directories = Directory.GetDirectories(path);
+        var files = Directory.GetFiles(path);
+        response += (directories.Length + files.Length).ToString();
+
+        foreach (var directory in directories)
+        {
+            response += " " + path + "/" + directory.Split("/")[directory.Split("/").Length - 1] + " true";
+        }
+
+        foreach (var file in files)
+        {
+            response += " " + path + "/" + file.Split("/")[file.Split("/").Length - 1] + " false";
+        }
+
+        return response;
     }
 
     /// <summary>
     /// Get file from server's directory
     /// </summary>
-    public void PerformGetRequest()
+    private static async Task<(long, byte[]?)> PerformGetRequest(string path)
     {
-        // pass
+        if (!File.Exists(path))
+        {
+            return (-1, null);
+        }
+
+        // Исправить !!!
+
+        var fileBytes = await File.ReadAllBytesAsync(path);
+        var size = fileBytes.Length;
+
+        return (size, fileBytes);
     }
 }
