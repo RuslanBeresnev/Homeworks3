@@ -1,63 +1,73 @@
 ﻿namespace SimpleFTP;
 
+using System.Net;
 using System.Net.Sockets;
 
 /// <summary>
-/// Realization of FTP-client
+/// FTP-Client realization
 /// </summary>
-public static class FTPClient
+public class FTPClient
 {
-    /// <summary>
-    /// Start accepting requests from user
-    /// </summary>
-    public static void StartClient(int port)
-    {
-        using (var client = new TcpClient("localhost", port))
-        {
-            var stream = client.GetStream();
-            var writer = new StreamWriter(stream);
-            writer.AutoFlush = true;
+    private IPAddress ip;
+    private int port;
 
-            while (true)
+    public FTPClient(string host, int port)
+    {
+        ip = IPAddress.Parse(host);
+        this.port = port;
+    }
+
+    /// <summary>
+    /// Requests file downloading from the server
+    /// </summary>
+    public async Task<string> Get(string path)
+    {
+        using (var client = new TcpClient())
+        {
+            await client.ConnectAsync(ip, port);
+            var stream = client.GetStream();
+            var streamWriter = new StreamWriter(stream);
+            var streamReader = new StreamReader(stream);
+
+            await streamWriter.WriteLineAsync("2 " + path);
+            await streamWriter.FlushAsync();
+
+            var response = await streamReader.ReadLineAsync();
+            if (response!.Split(' ')[0] == "-1")
             {
-                var request = Console.ReadLine();
-                if (request == null)
-                {
-                    continue;
-                }
-                if (request.Split(" ")[0] == "1")
-                {
-                    List(request, writer);
-                }
-                else if (request.Split(" ")[0] == "2")
-                {
-                    Get(request, writer);
-                }
-                else
-                {
-                    continue;
-                }
+                throw new FileNotFoundException();
             }
+
+            streamReader.Close();
+            streamWriter.Close();
+            return response;
         }
     }
 
     /// <summary>
-    /// Client's List-request realization
+    /// Requests list of files in server's directory
     /// </summary>
-    private static void List(string request, StreamWriter writer)
+    public async Task<string> List(string path)
     {
-        writer.WriteLine(request);
+        using (var client = new TcpClient())
+        {
+            await client.ConnectAsync(ip, port);
+            var stream = client.GetStream();
+            var streamWriter = new StreamWriter(stream);
+            var streamReader = new StreamReader(stream);
 
-        // pass
-    }
+            await streamWriter.WriteLineAsync("1 " + path);
+            await streamWriter.FlushAsync();
 
-    /// <summary>
-    /// Client's Get-request realization
-    /// </summary>
-    private static void Get(string request, StreamWriter writer)
-    {
-        writer.WriteLine(request);
+            var response = await streamReader.ReadLineAsync();
+            if (response!.Split(' ')[0] == "-1")
+            {
+                throw new DirectoryNotFoundException();
+            }
 
-        // pass
+            streamReader.Close();
+            streamWriter.Close();
+            return response;
+        }
     }
 }

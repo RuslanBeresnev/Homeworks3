@@ -2,92 +2,130 @@
 
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 
 /// <summary>
-/// FTP-server realization
+/// FTP-Server realization
 /// </summary>
-public static class FTPServer
+public class FTPServer
 {
-    public static async Task StartServer(IPAddress ip, int port)
+    private TcpListener listener;
+    private CancellationTokenSource cancellationTokenSource = new();
+
+    public FTPServer(string host, int port)
     {
-        var listener = new TcpListener(ip, port);
-        listener.Start();
-
-        while (true)
-        {
-            var socket = await listener.AcceptSocketAsync();
-
-            Task.Run(async () =>
-            {
-                var stream = new NetworkStream(socket);
-                var reader = new StreamReader(stream);
-                var data = await reader.ReadLineAsync();
-
-                var writer = new StreamWriter(stream);
-                writer.AutoFlush = true;
-
-                int commandNumber = int.Parse(data.Split(" ")[0]);
-                string path = data.Split(" ")[1];
-                if (commandNumber == 1)
-                {
-                    var response = PerformListRequest(path);
-                    // pass
-                }
-                else if (commandNumber == 2)
-                {
-                    (long size, byte[]? bytes) = await PerformGetRequest(path);
-                    // pass
-                }
-
-                socket.Close();
-            });
-        }
+        listener = new TcpListener(IPAddress.Parse(host), port);
     }
 
     /// <summary>
-    /// Server's directory enumeration realization
+    /// Starts the server
     /// </summary>
-    private static string PerformListRequest(string path)
+    public async void Start()
+    {
+        listener.Start();
+        while (!cancellationTokenSource.Token.IsCancellationRequested)
+        {
+            var client = await listener.AcceptTcpClientAsync();
+            await Task.Run(() => WorkProcess(client));
+        }
+        listener.Stop();
+    }
+
+    /// <summary>
+    /// Data parsing to command and path to file
+    /// </summary>
+    private (string, string) ParseData(string data)
+    {
+        return (data.Split()[0], data.Split()[1]);
+    }
+
+    /// <summary>
+    /// Server work process
+    /// </summary>
+    private async Task WorkProcess(TcpClient client)
+    {
+        var stream = client.GetStream();
+        var streamReader = new StreamReader(stream);
+        var streamWriter = new StreamWriter(stream) { AutoFlush = true };
+
+        var data = await streamReader.ReadLineAsync();
+        if (data == null)
+        {
+            throw new ArgumentException("Request to server cannot be null");
+        }
+        var (command, path) = ParseData(data);
+
+        switch (command)
+        {
+            case "1":
+                await List(path, streamWriter);
+                break;
+
+            case "2":
+                await Get(path, streamWriter);
+                break;
+
+            default:
+                throw new ArgumentException("Command not exists");
+        }
+
+        streamReader.Close();
+        streamWriter.Close();
+    }
+
+    /// <summary>
+    /// List command realization
+    /// </summary>
+    private async Task List(string path, StreamWriter streamWriter)
     {
         if (!Directory.Exists(path))
         {
-            return "-1";
+            await streamWriter.WriteLineAsync("-1");
+            return;
         }
 
-        var response = "";
-        var directories = Directory.GetDirectories(path);
         var files = Directory.GetFiles(path);
-        response += (directories.Length + files.Length).ToString();
+        var directories = Directory.GetDirectories(path);
+        var response = (directories.Length + files.Length).ToString();
 
-        foreach (var directory in directories)
+        foreach (var fileName in files)
         {
-            response += " " + path + "/" + directory.Split("/")[directory.Split("/").Length - 1] + " true";
+            response += " " + fileName + " false";
         }
 
-        foreach (var file in files)
+        foreach (var directoryName in directories)
         {
-            response += " " + path + "/" + file.Split("/")[file.Split("/").Length - 1] + " false";
+            response += " " + directoryName + " true";
         }
 
-        return response;
+        await streamWriter.WriteLineAsync(response);
     }
 
     /// <summary>
-    /// Get file from server's directory
+    /// Get command realization
     /// </summary>
-    private static async Task<(long, byte[]?)> PerformGetRequest(string path)
+    private async Task Get(string path, StreamWriter writer)
     {
         if (!File.Exists(path))
         {
-            return (-1, null);
+            await writer.WriteLineAsync("-1");
+            return;
         }
 
-        // Исправить !!!
+        await writer.WriteAsync($"{new FileInfo(path).Length}");
+        var file = await File.ReadAllBytesAsync(path, cancellationTokenSource.Token);
+        foreach (var oneByte in file)
+        {
+            await writer.WriteAsync(" " + oneByte.ToString());
+        }
+        await writer.WriteLineAsync();
+        await writer.FlushAsync();
+    }
 
-        var fileBytes = await File.ReadAllBytesAsync(path);
-        var size = fileBytes.Length;
-
-        return (size, fileBytes);
+    /// <summary>
+    /// Stops the server
+    /// </summary>
+    public void Stop()
+    {
+        cancellationTokenSource.Cancel();
     }
 }
