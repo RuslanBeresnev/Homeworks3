@@ -24,7 +24,7 @@ public class TestInfo
     public string Name { get; }
 
     /// <summary>
-    /// Reason of ignore
+    /// Ignore reason
     /// </summary>
     public string IgnoreReason { get; }
 
