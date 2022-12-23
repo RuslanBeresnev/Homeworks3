@@ -1,8 +1,9 @@
-﻿using System.Reflection;
+﻿namespace MyNUnit;
+
+using System.Reflection;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-
-namespace MyNUnit;
+using MyNUnitAttributes;
 
 /// <summary>
 /// Simple testing system realization
@@ -15,15 +16,40 @@ public static class MyNUnit
     private static ConcurrentDictionary<Type, ConcurrentBag<TestInfo>> resultsOfTests = new ConcurrentDictionary<Type, ConcurrentBag<TestInfo>>();
 
     /// <summary>
+    /// Get paths of different assemblies from list of all assemblies paths
+    /// </summary>
+    private static List<string> DistinctAssemblies(List<string> paths)
+    {
+        var assembliesNames = new List<string>();
+        var differentAssemblies = new List<string>();
+
+        foreach (var assemblyPath in paths)
+        {
+            var assemblyName = Path.GetFileName(assemblyPath);
+
+            if (!assembliesNames.Contains(assemblyName))
+            {
+                assembliesNames.Add(assemblyName);
+                differentAssemblies.Add(assemblyPath);
+            }
+        }
+
+        return differentAssemblies;
+    }
+
+    /// <summary>
     /// Loads all classes from the assemblies inside the specified directory
     /// </summary>
-    private static IEnumerable<Type> GetAllClasses(string path)
+    public static IEnumerable<Type> GetAllClasses(string path)
     {
         var assemblyFiles = Directory.EnumerateFiles(path, "*.dll", SearchOption.AllDirectories).Concat(Directory.EnumerateFiles(path,
             "*.exe", SearchOption.AllDirectories)).ToList();
-        assemblyFiles.RemoveAll(assemblyPath => assemblyPath.Contains("\\MyNUnit.exe"));
+        assemblyFiles.RemoveAll(assemblyPath => assemblyPath.Contains("\\Task1.exe"));
+        assemblyFiles.RemoveAll(assemblyPath => assemblyPath.Contains("\\Task1.dll"));
+        assemblyFiles.RemoveAll(assemblyPath => assemblyPath.Contains("\\Attributes.dll"));
 
-        return assemblyFiles.AsParallel().Select(Assembly.LoadFrom).SelectMany(a => a.ExportedTypes).Where(t => t.IsClass);
+        var differentAssemblyFiles = DistinctAssemblies(assemblyFiles);
+        return differentAssemblyFiles.AsParallel().Select(Assembly.LoadFrom).SelectMany(assembly => assembly.ExportedTypes).Where(type => type.IsClass);
     }
 
     /// <summary>
@@ -127,7 +153,7 @@ public static class MyNUnit
         }
         catch (Exception testException)
         {
-            thrownException = testException.GetType();
+            thrownException = testException.InnerException!.GetType();
 
             if (thrownException == attribute.ExpectedException)
             {

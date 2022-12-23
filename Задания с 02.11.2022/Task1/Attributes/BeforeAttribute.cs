@@ -1,4 +1,4 @@
-﻿namespace MyNUnit;
+﻿namespace MyNUnitAttributes;
 
 /// <summary>
 /// Attribute for marking methods to be invoked before each test method
