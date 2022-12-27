@@ -36,6 +36,7 @@ public class MyThreadPoolTests
         }
         time.Stop();
         Assert.True(time.Elapsed.TotalMilliseconds < 2100);
+        Assert.True(time.Elapsed.TotalMilliseconds > 1500);
     }
 
     [Test]

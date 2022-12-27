@@ -31,7 +31,7 @@ public class MyThreadPool
             this.threadPool = threadPool;
         }
 
-        public bool IsCompleted { get; set; } = false;
+        public bool IsCompleted { get; private set; } = false;
 
         public TResult? Result
         {
@@ -67,7 +67,7 @@ public class MyThreadPool
             finally
             {
                 IsCompleted = true;
-                threadPool.BusyThreadsCount--;
+                Interlocked.Decrement(ref threadPool.busyThreadsCount);
                 manualResetEvent.Set();
             }
         }
@@ -88,6 +88,7 @@ public class MyThreadPool
     private AutoResetEvent autoResetEvent = new(false);
     private CancellationTokenSource tokenSource = new();
     private Object lockObject = new();
+    private int busyThreadsCount = 0;
 
     public MyThreadPool(int threadsCount)
     {
@@ -109,7 +110,7 @@ public class MyThreadPool
     /// <summary>
     /// Количество занятых потоков
     /// </summary>
-    public int BusyThreadsCount { get; set; } = 0;
+    public int BusyThreadsCount => busyThreadsCount;
 
     /// <summary>
     /// Создать потоки и запустить их
@@ -124,12 +125,20 @@ public class MyThreadPool
                 {
                     if (tasksForExecution.TryDequeue(out var task))
                     {
-                        BusyThreadsCount++;
+                        if (!tasksForExecution.IsEmpty || tokenSource.IsCancellationRequested)
+                        {
+                            autoResetEvent.Set();
+                        }
+                        Interlocked.Increment(ref busyThreadsCount);
                         task();
                     }
                     else
                     {
                         autoResetEvent.WaitOne();
+                        if (tokenSource.IsCancellationRequested)
+                        {
+                            autoResetEvent.Set();
+                        }
                     }
                 }
             });
@@ -166,21 +175,19 @@ public class MyThreadPool
     /// </summary>
     public void Shutdown()
     {
-        tokenSource.Cancel();
-
-        for (int i = 0; i < ThreadsCount; i++)
+        lock (lockObject)
         {
-            autoResetEvent.Set();
-            Thread.Sleep(50);
+            tokenSource.Cancel();
         }
+
+        autoResetEvent.Set();
 
         for (int i = 0; i < ThreadsCount; i++)
         {
             pool[i].Join();
         }
 
-        var localLockObject = new Object();
-        lock (localLockObject)
+        lock (lockObject)
         {
             tokenSource.Dispose();
         }
