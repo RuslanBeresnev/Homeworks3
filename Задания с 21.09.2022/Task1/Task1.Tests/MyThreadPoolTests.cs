@@ -5,7 +5,7 @@ namespace MyThreadPool.Tests;
 public class MyThreadPoolTests
 {
     private const int THREADS_COUNT = 8;
-    private MyThreadPool pool = new MyThreadPool(THREADS_COUNT);
+    private MyThreadPool pool = new(THREADS_COUNT);
 
     [SetUp]
     public void Setup()
@@ -16,8 +16,8 @@ public class MyThreadPoolTests
     [Test]
     public void PoolHasSpecifiedNumberOfThreadsTest()
     {
-        var tasks = new IMyTask<int>[THREADS_COUNT];
-        for (int i = 0; i < THREADS_COUNT; i++)
+        var tasks = new IMyTask<int>[THREADS_COUNT * 2];
+        for (int i = 0; i < THREADS_COUNT * 2; i++)
         {
             tasks[i] = pool.Submit(() =>
             {
@@ -26,14 +26,16 @@ public class MyThreadPoolTests
             });
         }
 
-        Stopwatch time = new Stopwatch();
+        Assert.That(pool.BusyThreadsCount <= THREADS_COUNT);
+
+        Stopwatch time = new();
         time.Start();
-        for (int i = 0; i < THREADS_COUNT; i++)
+        for (int i = 0; i < THREADS_COUNT * 2; i++)
         {
             var result = tasks[i].Result;
         }
         time.Stop();
-        Assert.True(time.Elapsed.TotalMilliseconds < 1100);
+        Assert.True(time.Elapsed.TotalMilliseconds < 2100);
     }
 
     [Test]
@@ -43,7 +45,7 @@ public class MyThreadPoolTests
         for (int i = 0; i < 10; i++)
         {
             tasks[i] = pool.Submit(() => i);
-            Assert.AreEqual(i, tasks[i].Result);
+            Assert.That(i == tasks[i].Result);
         }
     }
 
@@ -54,7 +56,7 @@ public class MyThreadPoolTests
         for (int i = 0; i < 10; i++)
         {
             tasks[i] = pool.Submit(() => i).ContinueWith(x => x.ToString());
-            Assert.AreEqual(i.ToString(), tasks[i].Result);
+            Assert.That(i.ToString() == tasks[i].Result);
         }
     }
 
@@ -65,7 +67,7 @@ public class MyThreadPoolTests
         for (int i = 0; i < 10; i++)
         {
             tasks[i] = pool.Submit(() => i).ContinueWith(x => x.ToString()).ContinueWith(x => "i" + x);
-            Assert.AreEqual("i" + i.ToString(), tasks[i].Result);
+            Assert.That("i" + i.ToString() == tasks[i].Result);
         }
     }
 
@@ -83,5 +85,18 @@ public class MyThreadPoolTests
         var task = pool.Submit(() => 0);
         pool.Shutdown();
         Assert.Throws<InvalidOperationException>(() => task.ContinueWith(x => x * 2));
+    }
+
+    [Test]
+    public void TaskWithExceptionSubmittingTest()
+    {
+        var task = pool.Submit(() =>
+        {
+            throw new Exception();
+            return 0;
+        });
+
+        var result = 0;
+        Assert.Throws<AggregateException>(() => result = task.Result);
     }
 }
