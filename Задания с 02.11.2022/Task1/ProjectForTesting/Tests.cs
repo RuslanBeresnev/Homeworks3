@@ -5,6 +5,7 @@ using MyNUnitAttributes;
 /// <summary>
 /// Class with tests to check correctness of MyNUnit working
 /// </summary>
+[Test]
 public class Tests
 {
     [Test]
