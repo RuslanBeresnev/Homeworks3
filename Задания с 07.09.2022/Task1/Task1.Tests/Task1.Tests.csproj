@@ -20,4 +20,22 @@
     <ProjectReference Include="..\Task1\Task1.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Correct Case First Matrix.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Correct Case Result Matrix.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Correct Case Second Matrix.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Incorrect Case First Matrix.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Incorrect Case Second Matrix.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -5,6 +5,8 @@
 /// </summary>
 public static class MatrixGeneration
 {
+    private static Random random = new();
+
     /// <summary>
     /// Считать матрицу из файла
     /// </summary>
@@ -15,7 +17,7 @@ public static class MatrixGeneration
         var matrixWidth = allLines[0].Split(" ").Length;
 
         var matrix = new float[matrixHeight, matrixWidth];
-        StreamReader streamReader = new StreamReader(fileName);
+        using var streamReader = new StreamReader(fileName);
 
         var line = streamReader.ReadLine();
         var lineIndex = 0;
@@ -41,25 +43,23 @@ public static class MatrixGeneration
     /// </summary>
     public static void WriteMatrixToFile(string fileName, float[,] matrix)
     {
-        using (StreamWriter streamWriter = new StreamWriter(fileName))
-        {
-            for (int i = 0; i < matrix.GetLength(0); i++)
-            {
-                var row = "";
-                for (int j = 0; j < matrix.GetLength(1); j++)
-                {
-                    row += matrix[i, j].ToString();
+        using var streamWriter = new StreamWriter(fileName);
 
-                    if (j != matrix.GetLength(1) - 1)
-                    {
-                        row += " ";
-                    }
+        for (int i = 0; i < matrix.GetLength(0); i++)
+        {
+            var row = "";
+            for (int j = 0; j < matrix.GetLength(1); j++)
+            {
+                row += matrix[i, j].ToString();
+
+                if (j != matrix.GetLength(1) - 1)
+                {
+                    row += " ";
                 }
-                streamWriter.WriteLine(row);
             }
+            streamWriter.WriteLine(row);
         }
     }
-
 
     /// <summary>
     /// Сгенерировать матрицу определённых размеров
@@ -71,7 +71,6 @@ public static class MatrixGeneration
     public static float[,] GenerateMatrix(int height, int width, float minValue, float maxValue)
     {
         var matrix = new float[height, width];
-        var random = new Random();
 
         for (int i = 0; i < height; i++)
         {

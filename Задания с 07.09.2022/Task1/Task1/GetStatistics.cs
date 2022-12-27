@@ -1,39 +1,20 @@
-﻿using System.Diagnostics;
+﻿namespace Task1;
 
-namespace Task1;
+using System.Diagnostics;
 
 /// <summary>
 /// Реализация статистики при сравнении работы двух способов умножения матриц
 /// </summary>
-internal class GetStatistics
+internal class Statistics
 {
-    /// <summary>
-    /// Посчитать математическое ожидание для массива равновероятных величин
-    /// </summary>
-    private static float CalculateMathematicalExpectation(float[] values)
-    {
-        var result = 0f;
-        for (int i = 0; i < values.Length; i++)
-        {
-            result += values[i] * (1f / values.Length);
-        }
-        return result;
-    }
-
     /// <summary>
     /// Посчитать среднеквадратичное отклонение для массива равновероятных величин
     /// </summary>
     private static float CalculateStandardDeviation(float[] values)
     {
-        var mathematicalExpectation = CalculateMathematicalExpectation(values);
-        var sumOfSquaredDeviations = 0f;
-
-        for (int i = 0; i < values.Length; i++)
-        {
-            sumOfSquaredDeviations += (float) Math.Pow(values[i] - mathematicalExpectation, 2);
-        }
-        var standardDeviation = (float)Math.Sqrt(sumOfSquaredDeviations / values.Length);
-
+        var average = values.Average();
+        var sum = values.Sum(value => (value - average) * (value - average));
+        var standardDeviation = (float)Math.Sqrt(sum / values.Length);
         return standardDeviation;
     }
 
@@ -44,7 +25,9 @@ internal class GetStatistics
     {
         var time = new Stopwatch();
         var testsDataMatrix = MatrixGeneration.GetMatrixFromFile(testsDataFile);
-        StreamWriter streamWriter = new StreamWriter(statisticsOutputFile);
+        using var streamWriter = new StreamWriter(statisticsOutputFile);
+
+        streamWriter.WriteLine("№          | Матожидание(однопоточный метод)   | Среднекв. отклонение(однопоточный метод)   | Матожидание(многопоточный метод)  | Среднекв. отклонение(многопоточный метод)");
 
         for (int testNumber = 0; testNumber < testsDataMatrix.GetLength(0); testNumber++)
         {
@@ -61,35 +44,23 @@ internal class GetStatistics
                 time.Restart();
                 MatrixMultiplication.SingleThreadedMatrixMultiplication(firstMatrix, secondMatrix);
                 time.Stop();
-                singleThreadMethodWorkingTimes[launchNumber] = (float) time.Elapsed.TotalSeconds;
+                singleThreadMethodWorkingTimes[launchNumber] = (float)time.Elapsed.TotalSeconds;
 
                 time.Restart();
                 MatrixMultiplication.MultiThreadedMatrixMultiplication(firstMatrix, secondMatrix);
                 time.Stop();
-                multiThreadMethodWorkingTimes[launchNumber] = (float) time.Elapsed.TotalSeconds;
+                multiThreadMethodWorkingTimes[launchNumber] = (float)time.Elapsed.TotalSeconds;
             }
 
-            var singleThreadMethodMathematicalExpectation = CalculateMathematicalExpectation(singleThreadMethodWorkingTimes);
-            var multiThreadMethodMathematicalExpectation = CalculateMathematicalExpectation(multiThreadMethodWorkingTimes);
+            var singleThreadMethodMathematicalExpectation = singleThreadMethodWorkingTimes.Average();
+            var multiThreadMethodMathematicalExpectation = multiThreadMethodWorkingTimes.Average();
 
             var singleThreadMethodStandardDeviation = CalculateStandardDeviation(singleThreadMethodWorkingTimes);
             var multiThreadMethodStandardDeviation = CalculateStandardDeviation(multiThreadMethodWorkingTimes);
 
-            streamWriter.WriteLine($"Статистика для теста под номером: {testNumber}");
-            streamWriter.WriteLine("--------------------------------------------------------------------------------");
-            streamWriter.WriteLine("Матожидание для однопоточного метода " +
-                $"умножения матриц (секунды): {singleThreadMethodMathematicalExpectation}");
-            streamWriter.WriteLine("Среднеквадратичное отклонение для однопоточного метода " +
-                $"умножения матриц (секунды): {singleThreadMethodStandardDeviation}");
-            streamWriter.WriteLine("Матожидание для многопоточного метода " +
-                $"умножения матриц (секунды): {multiThreadMethodMathematicalExpectation}");
-            streamWriter.WriteLine("Среднеквадратичное отклонение для многопоточного метода " +
-                $"умножения матриц (секунды): {multiThreadMethodStandardDeviation}");
-            streamWriter.WriteLine("Ускорение при использовании многопоточного метода " +
-                $"(во сколько раз быстрее): {singleThreadMethodMathematicalExpectation / multiThreadMethodMathematicalExpectation}");
-            streamWriter.WriteLine();
+            streamWriter.Write($"     {testNumber + 1}     |");
+            streamWriter.Write($"            {Math.Round(singleThreadMethodMathematicalExpectation, 1)} секунд             |               {Math.Round(singleThreadMethodStandardDeviation, 3)} секунд                 |");
+            streamWriter.WriteLine($"            {Math.Round(multiThreadMethodMathematicalExpectation, 1)} секунд               |          {Math.Round(multiThreadMethodStandardDeviation, 3)} секунд           ");
         }
-
-        streamWriter.Close();
     }
 }
