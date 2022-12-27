@@ -93,18 +93,40 @@ public static class MyNUnit
         Parallel.ForEach(methodsToTest.Keys, type =>
         {
             resultsOfTests.TryAdd(type, new ConcurrentBag<TestInfo>());
+            bool testsCancelled = false;
 
             foreach (var beforeClassMethod in methodsToTest[type].BeforeClassTestMethods)
             {
-                beforeClassMethod.Invoke(null, null);
+                try
+                {
+                    beforeClassMethod.Invoke(null, null);
+                }
+                catch
+                {
+                    testsCancelled = true;
+                    break;
+                }
             }
 
             Parallel.ForEach(methodsToTest[type].TestMethods, testMethod =>
-                ExecuteTestMethod(type, testMethod));
+                ExecuteTestMethod(type, testMethod, testsCancelled));
 
             foreach (var afterClassMethod in methodsToTest[type].AfterClassTestMethods)
             {
-                afterClassMethod.Invoke(null, null);
+                try
+                {
+                    afterClassMethod.Invoke(null, null);
+                }
+                catch
+                {
+                    foreach (var testInfo in resultsOfTests[type])
+                    {
+                        testInfo.IsSuccessful = false;
+                        testInfo.AdditionalInformation = "Test was failed because some method " +
+                        "with AfterClass attrbution executed with exception";
+                    }
+                    break;
+                }
             }
         });
     }
@@ -112,23 +134,29 @@ public static class MyNUnit
     /// <summary>
     /// Executes a test method and gets information about testing
     /// </summary>
-    private static void ExecuteTestMethod(Type type, MethodInfo method)
+    private static void ExecuteTestMethod(Type type, MethodInfo method, bool testsCancelled)
     {
+        if (testsCancelled)
+        {
+            resultsOfTests[type].Add(new TestInfo(method.Name, "Method BeforeClass attribute executed with exception"));
+            return;
+        }
+
         var attribute = method.GetCustomAttribute<TestAttribute>();
         var isSuccessful = false;
         Type? thrownException = null;
 
         var emptyConstructor = type.GetConstructor(Type.EmptyTypes);
 
-        if (emptyConstructor == null)
-        {
-            throw new FormatException($"{type.Name} must have parameterless constructor");
-        }
-
         if (attribute!.IsIgnored)
         {
             resultsOfTests[type].Add(new TestInfo(method.Name, attribute.IgnoreMessage));
             return;
+        }
+
+        if (emptyConstructor == null)
+        {
+            throw new FormatException($"{type.Name} must have parameterless constructor");
         }
 
         var instance = emptyConstructor.Invoke(null);

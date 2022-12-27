@@ -2,29 +2,35 @@ namespace MyNUnit.Tests;
 
 public class MyNUnitTests
 {
-    private List<TestInfo> allTestsResults;
-    private List<string> methodsToTestNames;
-    private const string pathToProjectWithTests = "..\\..\\..\\..\\ProjectForTesting";
+    private List<TestInfo> baseTestsResults;
+    private List<TestInfo> additionalTestsResults;
+
+    private List<string> baseMethodsToTestNames;
+
+    private const string pathToProjectWithBaseTests = "..\\..\\..\\..\\ProjectForTesting";
+    private const string pathToProjectWithAdditionalTests = "..\\..\\..\\..\\ProjectForAdditionalTesting";
 
     [SetUp]
     public void Setup()
     {
-        allTestsResults = new List<TestInfo>();
+        baseTestsResults = new List<TestInfo>();
+        additionalTestsResults = new List<TestInfo>();
 
-        methodsToTestNames = new List<string>();
-        methodsToTestNames.Add("SuccessfulMethod");
-        methodsToTestNames.Add("IgnoreMethod");
-        methodsToTestNames.Add("IgnoreMethodThrowingException");
-        methodsToTestNames.Add("ExpectedExceptionThrown");
-        methodsToTestNames.Add("ExceptionOnFail");
-        methodsToTestNames.Add("UnexpectedExceptionThrown");
+        baseMethodsToTestNames = new List<string>();
+        baseMethodsToTestNames.Add("SuccessfulMethod");
+        baseMethodsToTestNames.Add("IgnoreMethod");
+        baseMethodsToTestNames.Add("IgnoreMethodThrowingException");
+        baseMethodsToTestNames.Add("ExpectedExceptionThrown");
+        baseMethodsToTestNames.Add("ExceptionOnFail");
+        baseMethodsToTestNames.Add("UnexpectedExceptionThrown");
 
-        allTestsResults = GetInformationAboutAllTests();
+        baseTestsResults = GetInformationAboutTestsInTestedProject(pathToProjectWithBaseTests);
+        additionalTestsResults = GetInformationAboutTestsInTestedProject(pathToProjectWithAdditionalTests);
     }
 
-    private List<TestInfo> GetInformationAboutAllTests()
+    private List<TestInfo> GetInformationAboutTestsInTestedProject(string pathToProject)
     {
-        var report = MyNUnit.RunTestsAndGetReport(pathToProjectWithTests);
+        var report = MyNUnit.RunTestsAndGetReport(pathToProject);
         var result = new List<TestInfo>();
 
         foreach (var list in report.Values)
@@ -43,18 +49,18 @@ public class MyNUnitTests
     {
         var methodsNames = new List<string>();
 
-        foreach (var testInfo in allTestsResults)
+        foreach (var testInfo in baseTestsResults)
         {
             methodsNames.Add(testInfo.MethodName);
         }
 
-        Assert.AreEqual(methodsToTestNames.Count, methodsNames.Intersect(methodsToTestNames).Count());
+        Assert.That(baseMethodsToTestNames.Count == methodsNames.Intersect(baseMethodsToTestNames).Count());
     }
 
     [Test]
     public void SuccessfulTestsPassedTest()
     {
-        var successInfo = allTestsResults.Find(i => i.MethodName == "SuccessfulMethod");
+        var successInfo = baseTestsResults.Find(i => i.MethodName == "SuccessfulMethod");
 
         Assert.IsTrue(successInfo!.IsSuccessful);
     }
@@ -63,8 +69,8 @@ public class MyNUnitTests
     public void TestToIgnoreTest()
     {
 
-        var ignoredMethodInfo = allTestsResults.Find(i => i.MethodName == "IgnoreMethod");
-        var ignoredMethodWithExceptionInfo = allTestsResults.Find(i => i.MethodName == "IgnoreMethodThrowingException");
+        var ignoredMethodInfo = baseTestsResults.Find(i => i.MethodName == "IgnoreMethod");
+        var ignoredMethodWithExceptionInfo = baseTestsResults.Find(i => i.MethodName == "IgnoreMethodThrowingException");
 
         Assert.IsTrue(ignoredMethodInfo!.IsIgnored);
         Assert.IsTrue(ignoredMethodWithExceptionInfo!.IsIgnored);
@@ -73,18 +79,33 @@ public class MyNUnitTests
     [Test]
     public void MethodWithExpectedExceptionTest()
     {
-        var methodWithExpectedExceptionInfo = allTestsResults.Find(i => i.MethodName == "ExpectedExceptionThrown");
+        var methodWithExpectedExceptionInfo = baseTestsResults.Find(i => i.MethodName == "ExpectedExceptionThrown");
 
-        Assert.AreEqual(methodWithExpectedExceptionInfo.ExpectedException, methodWithExpectedExceptionInfo.ActualException);
+        Assert.That(methodWithExpectedExceptionInfo!.ExpectedException == methodWithExpectedExceptionInfo.ActualException);
         Assert.IsTrue(methodWithExpectedExceptionInfo.IsSuccessful);
     }
 
     [Test]
     public void MethodWithUnexpectedExceptionTest()
     {
-        var methodWithUnexpectedExceptionInfo = allTestsResults.Find(i => i.MethodName == "UnexpectedExceptionThrown");
+        var methodWithUnexpectedExceptionInfo = baseTestsResults.Find(i => i.MethodName == "UnexpectedExceptionThrown");
 
-        Assert.AreNotEqual(methodWithUnexpectedExceptionInfo.ActualException, methodWithUnexpectedExceptionInfo.ExpectedException);
+        Assert.That(methodWithUnexpectedExceptionInfo!.ActualException != methodWithUnexpectedExceptionInfo.ExpectedException);
         Assert.IsFalse(methodWithUnexpectedExceptionInfo.IsSuccessful);
+    }
+
+    [Test]
+    public void MethodWithBeforeClassAttributeExecutedWithExceptionTest()
+    {
+        var simpleMethodInfo = additionalTestsResults.Find(i => i.MethodName == "SimpleMethod");
+        Assert.IsTrue(simpleMethodInfo!.IsIgnored);
+    }
+
+    [Test]
+    public void MethodWithAfterClassAttributeExecutedWithExceptionTest()
+    {
+        var simpleMethodInfo = additionalTestsResults.Find(i => i.MethodName == "SimpleMethod");
+        Assert.IsFalse(simpleMethodInfo!.IsSuccessful);
+        Assert.That(simpleMethodInfo!.AdditionalInformation != "");
     }
 }

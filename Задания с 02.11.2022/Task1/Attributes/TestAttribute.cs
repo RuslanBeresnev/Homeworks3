@@ -3,6 +3,7 @@
 /// <summary>
 /// Attribute for marking test methods
 /// </summary>
+[AttributeUsage(AttributeTargets.Method)]
 public class TestAttribute : Attribute
 {
     /// <summary>

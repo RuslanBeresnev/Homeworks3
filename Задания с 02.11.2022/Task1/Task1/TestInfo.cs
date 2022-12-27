@@ -28,7 +28,7 @@ public class TestInfo
     /// <summary>
     /// Whether a test was successfull
     /// </summary>
-    public bool IsSuccessful { get; private set; }
+    public bool IsSuccessful { get; set; }
 
     /// <summary>
     /// Reason of test ignore
@@ -41,14 +41,19 @@ public class TestInfo
     public TimeSpan Time { get; private set; }
 
     /// <summary>
+    /// Additional informtion about test's run or about reason of failure
+    /// </summary>
+    public string AdditionalInformation { get; set; }
+
+    /// <summary>
     /// Constructor for ignored test methods
     /// </summary>
     public TestInfo(string name, string ignoranceReason)
     {
         IsIgnored = true;
-
         MethodName = name;
         ReasonToIgnore = ignoranceReason;
+        AdditionalInformation = "";
     }
 
     /// <summary>
@@ -58,7 +63,7 @@ public class TestInfo
     {
         IsIgnored = false;
         ReasonToIgnore = "";
-
+        AdditionalInformation = "";
         MethodName = name;
         IsSuccessful = isSuccessful;
         ExpectedException = expectedException;
