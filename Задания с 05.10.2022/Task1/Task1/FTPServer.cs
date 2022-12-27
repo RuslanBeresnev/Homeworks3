@@ -10,6 +10,7 @@ public class FTPServer
 {
     private TcpListener listener;
     private CancellationTokenSource cancellationTokenSource = new();
+    private List<Task> connectedClients = new();
 
     public FTPServer(string host, int port)
     {
@@ -25,8 +26,10 @@ public class FTPServer
         while (!cancellationTokenSource.Token.IsCancellationRequested)
         {
             var client = await listener.AcceptTcpClientAsync();
-            await Task.Run(() => WorkProcess(client));
+            connectedClients.Add(Task.Run(() => WorkProcess(client)));
         }
+
+        await Task.WhenAll(connectedClients);
         listener.Stop();
     }
 
@@ -43,9 +46,9 @@ public class FTPServer
     /// </summary>
     private async Task WorkProcess(TcpClient client)
     {
-        var stream = client.GetStream();
-        var streamReader = new StreamReader(stream);
-        var streamWriter = new StreamWriter(stream) { AutoFlush = true };
+        using var stream = client.GetStream();
+        using var streamReader = new StreamReader(stream);
+        using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
 
         var data = await streamReader.ReadLineAsync();
         if (data == null)
@@ -67,9 +70,6 @@ public class FTPServer
             default:
                 throw new ArgumentException("Command not exists");
         }
-
-        streamReader.Close();
-        streamWriter.Close();
     }
 
     /// <summary>

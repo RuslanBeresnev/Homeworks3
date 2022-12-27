@@ -8,6 +8,7 @@ public class SimpleFTPTests
     private const int port = 8888;
 
     private FTPClient client = new(host, port);
+    private FTPClient client2 = new(host, port);
     private FTPServer server = new(host, port);
 
     [OneTimeSetUp]
@@ -27,23 +28,16 @@ public class SimpleFTPTests
     {
         var path = "../../../Dir1";
         var result = await client.List(path);
-        Assert.AreEqual($"2 {path}\\File1.txt false {path}\\Dir2 true", result);
+        Assert.That($"2 {path}\\File1.txt false {path}\\Dir2 true" == result);
     }
 
     [Test]
     public async Task GetCommandTest()
     {
         var path = "../../../Dir1/File1.txt";
-        var downloadedFileInfo = await client.Get(path);
-
+        var downloadedFileBytes = await client.Get(path);
         var sourceFileBytes = File.ReadAllBytes(path);
-        var sourceFileInfo = sourceFileBytes.Length.ToString();
-        for (int i = 0; i < sourceFileBytes.Length; i++)
-        {
-            sourceFileInfo += " " + sourceFileBytes[i].ToString();
-        }
-
-        Assert.AreEqual(sourceFileInfo, downloadedFileInfo);
+        Assert.That(sourceFileBytes.SequenceEqual(downloadedFileBytes));
     }
 
     [Test]
@@ -54,9 +48,30 @@ public class SimpleFTPTests
     }
 
     [Test]
-    public void NonExistentFileForGetTest()
+    public async Task TwoClientsExecuteListRequestTest()
     {
-        var path = "../../../File3.txt";
-        Assert.ThrowsAsync<FileNotFoundException>(async () => await client.Get(path));
+        var path = "../../../Dir1";
+
+        var task1 = client.List(path);
+        var task2 = client2.List(path);
+
+        var result1 = await task1;
+        var result2 = await task2;
+
+        Assert.That(result1 == result2);
+    }
+
+    [Test]
+    public async Task TwoClientsExecuteGetRequestTest()
+    {
+        var path = "../../../Dir1/File1.txt";
+
+        var task1 = client.Get(path);
+        var task2 = client2.Get(path);
+
+        var downloadedFileInfoFromFirstClient = await task1;
+        var downloadedFileInfoFromSecondClient = await task2;
+
+        Assert.That(downloadedFileInfoFromFirstClient.SequenceEqual(downloadedFileInfoFromSecondClient));
     }
 }
