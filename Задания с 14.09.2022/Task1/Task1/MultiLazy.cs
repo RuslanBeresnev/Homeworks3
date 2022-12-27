@@ -14,7 +14,7 @@ public class MultiLazy<T> : ILazy<T>
     {
         if (function == null)
         {
-            throw new InvalidOperationException("В качестве лямбда-функции передана нулевая функция");
+            throw new ArgumentNullException("В качестве лямбда-функции передана нулевая функция");
         }
         this.function = function;
     }

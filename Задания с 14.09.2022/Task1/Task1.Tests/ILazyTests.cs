@@ -12,12 +12,12 @@ public class ILazyTests
         time.Restart();
         var firstValue = realization.Get();
         time.Stop();
-        var firstGetCallDuration = (float) time.Elapsed.TotalSeconds;
+        var firstGetCallDuration = (float)time.Elapsed.TotalSeconds;
 
         time.Restart();
         var secondValue = realization.Get();
         time.Stop();
-        var secondGetCallDuration = (float) time.Elapsed.TotalSeconds;
+        var secondGetCallDuration = (float)time.Elapsed.TotalSeconds;
 
         Assert.AreEqual(1, firstValue);
         Assert.AreEqual(1, secondValue);
