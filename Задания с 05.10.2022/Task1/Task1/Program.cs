@@ -8,7 +8,7 @@ public class Program
     /// args[2] - command name
     /// args[3] - path to file or directory
     /// </summary>
-    static async void Main(string[] args)
+    static async Task Main(string[] args)
     {
         FTPServer server = new(args[0], Int32.Parse(args[1]));
         FTPClient client = new(args[0], Int32.Parse(args[1]));

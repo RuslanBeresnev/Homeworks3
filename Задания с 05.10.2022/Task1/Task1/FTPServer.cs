@@ -25,7 +25,7 @@ public class FTPServer
         listener.Start();
         while (!cancellationTokenSource.Token.IsCancellationRequested)
         {
-            var client = await listener.AcceptTcpClientAsync();
+            var client = await listener.AcceptTcpClientAsync(cancellationTokenSource.Token);
             connectedClients.Add(Task.Run(() => WorkProcess(client)));
         }
 
@@ -46,29 +46,32 @@ public class FTPServer
     /// </summary>
     private async Task WorkProcess(TcpClient client)
     {
-        using var stream = client.GetStream();
-        using var streamReader = new StreamReader(stream);
-        using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
-
-        var data = await streamReader.ReadLineAsync();
-        if (data == null)
+        using (client)
         {
-            throw new ArgumentException("Request to server cannot be null");
-        }
-        var (command, path) = ParseData(data);
+            using var stream = client.GetStream();
+            using var streamReader = new StreamReader(stream);
+            using var streamWriter = new StreamWriter(stream) { AutoFlush = true };
 
-        switch (command)
-        {
-            case "1":
-                await List(path, streamWriter);
-                break;
+            var data = await streamReader.ReadLineAsync();
+            if (data == null)
+            {
+                throw new ArgumentException("Request to server cannot be null");
+            }
+            var (command, path) = ParseData(data);
 
-            case "2":
-                await Get(path, streamWriter);
-                break;
+            switch (command)
+            {
+                case "1":
+                    await List(path, streamWriter);
+                    break;
 
-            default:
-                throw new ArgumentException("Command not exists");
+                case "2":
+                    await Get(path, streamWriter);
+                    break;
+
+                default:
+                    throw new ArgumentException("Command not exists");
+            }
         }
     }
 

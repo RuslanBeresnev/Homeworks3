@@ -7,13 +7,4 @@
     <Nullable>enable</Nullable>
     <StartupObject></StartupObject>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Program.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ApplicationDefinition Include="Program.cs" />
-  </ItemGroup>
-
 </Project>
